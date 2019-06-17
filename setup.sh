@@ -22,7 +22,7 @@ make install-pip-package
 
 
 make clean
-
+git clean -fd
 
 # test
 python -c "import open3d; assert 'capture_depth_point_cloud' in dir(open3d.visualization.Visualizer), 'capture_depth_point_cloud is not available...'"
