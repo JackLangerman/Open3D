@@ -1,6 +1,6 @@
 # setup
 cmake -DENABLE_HEADLESS_RENDERING=OFF \
-                 -DPYTHON_EXECUTABLE:FILEPATH=$(which python) ../CMakeLists.txt 
+                 -DPYTHON_EXECUTABLE:FILEPATH=$(which python) CMakeLists.txt 
 
 # build
 make -j
