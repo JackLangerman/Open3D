@@ -1,26 +1,12 @@
-
-# mkdir -p build
-# cd build
-
-# bash ../util/scripts/install-deps-osx.sh
-
-conda install libpng jpeg pkg-config jsoncpp eigen -y
-conda install -c ryanvolz libusb  -y
-conda install -c menpo glfw3  -y
-conda install -c conda-forge glew  -y
-
-
+# setup
 cmake -DENABLE_HEADLESS_RENDERING=OFF \
                  -DPYTHON_EXECUTABLE:FILEPATH=$(which python) ../CMakeLists.txt 
 
-# cd ..
-
+# build
 make -j
-
-
 make install-pip-package
 
-
+# clean up
 make clean
 git clean -fd
 
