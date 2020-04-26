@@ -68,17 +68,17 @@ bool PinholeCameraIntrinsic::ConvertToJsonValue(Json::Value &value) const {
 
 bool PinholeCameraIntrinsic::ConvertFromJsonValue(const Json::Value &value) {
     if (value.isObject() == false) {
-        utility::PrintWarning(
+        utility::LogWarning(
                 "PinholeCameraParameters read JSON failed: unsupported json "
-                "format.\n");
+                "format.");
         return false;
     }
     width_ = value.get("width", -1).asInt();
     height_ = value.get("height", -1).asInt();
     if (EigenMatrix3dFromJsonArray(intrinsic_matrix_,
                                    value["intrinsic_matrix"]) == false) {
-        utility::PrintWarning(
-                "PinholeCameraParameters read JSON failed: wrong format.\n");
+        utility::LogWarning(
+                "PinholeCameraParameters read JSON failed: wrong format.");
         return false;
     }
     return true;

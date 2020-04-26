@@ -1,3 +1,9 @@
+# Configure a header file to pass the version settings to the source code
+configure_file("${PROJECT_SOURCE_DIR}/src/Open3D/Open3D.h.in"
+               "${PROJECT_SOURCE_DIR}/src/Open3D/Open3D.h")
+configure_file("${PROJECT_SOURCE_DIR}/src/Open3D/Open3DConfig.h.in"
+               "${PROJECT_SOURCE_DIR}/src/Open3D/Open3DConfig.h")
+
 # Subdirectories
 add_subdirectory(Camera)
 add_subdirectory(ColorMap)
@@ -43,12 +49,15 @@ add_library(${CMAKE_PROJECT_NAME}
     $<TARGET_OBJECTS:IO>
     $<TARGET_OBJECTS:Visualization>
 )
+ShowAndAbortOnWarning(${CMAKE_PROJECT_NAME})
 
 # headless rendering
 if (ENABLE_HEADLESS_RENDERING)
     find_package(OSMesa REQUIRED)
     include_directories(${OSMESA_INCLUDE_DIR})
+    list(APPEND 3RDPARTY_INCLUDE_DIRS ${OSMESA_INCLUDE_DIR})
     target_link_libraries(${CMAKE_PROJECT_NAME} ${OSMESA_LIBRARY})
+    list(APPEND 3RDPARTY_LIBRARIES ${OSMESA_LIBRARY})
 else ()
     find_package(OpenGL REQUIRED)
     target_link_libraries(${CMAKE_PROJECT_NAME} ${OPENGL_LIBRARIES})
@@ -89,7 +98,7 @@ function(SourcePath2InstallPath input_dirs output_dirs input_base_dir)
 endfunction()
 
 # build a list of include folders
-SourcePath2InstallPath("${3RDPARTY_INCLUDE_DIRS_AT_INSTALL}" INSTALL_3RDPARTY_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/..)
+SourcePath2InstallPath("${3RDPARTY_INCLUDE_DIRS_AT_INSTALL}" INSTALL_3RDPARTY_INCLUDE_DIRS ${PROJECT_SOURCE_DIR})
 
 # set Open3D include directories
 list(APPEND CONFIG_Open3D_INCLUDE_DIRS

@@ -1,14 +1,16 @@
+
 find_package(PkgConfig QUIET)
 find_package(OpenGL    QUIET)
 find_package(pybind11  QUIET)
 
 if (PKGCONFIG_FOUND)
-    pkg_search_module(EIGEN3    eigen3>=3.2.7   QUIET)
-    pkg_search_module(JPEG      libjpeg         QUIET)
-    pkg_search_module(GLFW      glfw3           QUIET)
-    pkg_search_module(GLEW      glew            QUIET)
-    pkg_search_module(JSONCPP   jsoncpp>=1.7.0  QUIET)
-    pkg_search_module(PNG       libpng>=1.6.0   QUIET)
+    pkg_search_module(FLANN           flann           QUIET)
+    pkg_search_module(EIGEN3          eigen3>=3.2.7   QUIET)
+    pkg_search_module(GLFW            glfw3           QUIET)
+    pkg_search_module(GLEW            glew            QUIET)
+    pkg_search_module(JSONCPP         jsoncpp>=1.7.0  QUIET)
+    pkg_search_module(PNG             libpng>=1.6.0   QUIET)
+    pkg_search_module(JPEG_TURBO      libturbojpeg    QUIET)
 endif (PKGCONFIG_FOUND)
 
 macro(INSTALL_HEADERS source)
@@ -24,7 +26,12 @@ macro(INSTALL_HEADERS source)
 endmacro()
 
 # dirent
-Directories("${CMAKE_CURRENT_SOURCE_DIR}/dirent" dirent_INCLUDE_DIRS)
+if (WIN32)
+    message(STATUS "On windows, so using 3rdparty/dirent")
+    Directories("${CMAKE_CURRENT_SOURCE_DIR}/dirent" dirent_INCLUDE_DIRS)
+else ()
+    message(STATUS "Using system dirent")
+endif ()
 
 # Eigen 3.2.7 version is required for pybind11 included in Open3D
 if (BUILD_EIGEN3)
@@ -43,7 +50,13 @@ if (BUILD_EIGEN3)
 endif ()
 
 # flann
-Directories("${CMAKE_CURRENT_SOURCE_DIR}/flann"  flann_INCLUDE_DIRS)
+if (BUILD_FLANN OR NOT FLANN_FOUND)
+  message(STATUS "Using open3d's flann")
+  Directories("${CMAKE_CURRENT_SOURCE_DIR}/flann"  FLANN_INCLUDE_DIRS)
+else ()
+  message(STATUS "Using system flann ${FLANN_VERSION}")
+endif ()
+message(STATUS "Flann includes ${FLANN_INCLUDE_DIRS}")
 
 # GLEW
 if (BUILD_GLEW)
@@ -99,52 +112,19 @@ if (BUILD_GLFW)
     list(APPEND GLFW_LIBRARIES    ${OPENGL_gl_LIBRARY})
 endif ()
 
-# JPEG
-if (BUILD_JPEG)
-    message(STATUS "Building LIBJPEG from source (BUILD_JPEG=ON)")
-elseif (JPEG_FOUND)
-    message(STATUS "Using installed LIBJPEG ${JPEG_VERSION}")
-else ()
-    message(STATUS "Unable to find LIBJPEG installed in the system")
-    message(STATUS "Building LIBJPEG from source")
-    set(BUILD_JPEG ON)
-endif ()
+# Azure Kinect
+include(azure_kinect/azure_kinect.cmake)
 
-if (BUILD_JPEG)
-    add_subdirectory(libjpeg)
-endif ()
+# JSONCPP is always built from source to avoid ABI compatibility issues
+message(STATUS "Building JSONCPP from source")
+add_subdirectory(jsoncpp)
 
-# JSONCPP
-if ((APPLE) AND ("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU"))
-    # It is a known bug that g++ on OSX only supports libstdc++
-    # The jsoncpp installed by brew by default is compiled with libc++
-    # If the two libraries are linked together, they break the build
-    # https://github.com/open-source-parsers/jsoncpp/issues/597
-    # https://github.com/IntelVCL/Open3D/issues/9
-    message(STATUS "Building JSONCPP from source, without installing headers")
-    add_subdirectory(jsoncpp)
-    set(BUILD_JSONCPP ON)
-else ()
-    if (BUILD_JSONCPP)
-        message(STATUS "Building JSONCPP from source (BUILD_JSONCPP=ON)")
-    elseif (JSONCPP_FOUND)
-        message(STATUS "Using installed JSONCPP ${JSONCPP_VERSION}")
-    else ()
-        message(STATUS "Unable to find JSONCPP installed in the system")
-        message(STATUS "Building JSONCPP from source")
-        set(BUILD_JSONCPP ON)
-    endif ()
-
-    if (BUILD_JSONCPP)
-        add_subdirectory(jsoncpp)
-    endif ()
-endif ()
 
 # liblzf
 Directories("${CMAKE_CURRENT_SOURCE_DIR}/liblzf" liblzf_INCLUDE_DIRS)
 
 # tritriintersect
-Directories("${CMAKE_CURRENT_SOURCE_DIR}/tritriintersect" liblzf_INCLUDE_DIRS)
+Directories("${CMAKE_CURRENT_SOURCE_DIR}/tomasakeninemoeller/include" tomasakeninemoeller_INCLUDE_DIRS)
 
 # PNG
 if (BUILD_PNG)
@@ -152,9 +132,9 @@ if (BUILD_PNG)
 elseif (PNG_FOUND)
     message(STATUS "Using installed LIBPNG ${PNG_VERSION}")
 else ()
-    message(STATUS "Unable to find LIBPNG installed in the system")
-    message(STATUS "Building LIBPNG from source")
-    set(BUILD_PNG ON)
+    message(STATUS "Unable to find libpng installed in the system")
+    message(STATUS "Building libpng from source")
+    set(BUILD_PNG on)
 endif ()
 
 if (BUILD_PNG)
@@ -162,6 +142,24 @@ if (BUILD_PNG)
     add_subdirectory(libpng)
     list(APPEND PNG_LIBRARIES zlib)
 endif ()
+
+# JPEG
+if (BUILD_JPEG)
+    message(STATUS "Building libjpeg-turbo from source (BUILD_JPEG=ON)")
+elseif (JPEG_TURBO_FOUND)
+    message(STATUS "Using installed libjpeg-turbo ${JPEG_TUROB_VERSION}")
+    message(STATUS ${JPEG_TURBO_INCLUDE_DIRS})
+    message(STATUS ${JPEG_TURBO_LIBRARIES})
+else ()
+    message(STATUS "Unable to find libjpeg-turbo installed in the system")
+    message(STATUS "Building libjpeg-turbo from source")
+    set(BUILD_JPEG ON)
+endif ()
+
+if (BUILD_JPEG)
+    message(STATUS "Building libjpeg-turbo from source")
+    include(libjpeg-turbo/libjpeg-turbo.cmake)
+endif()
 
 # PyBind
 # http://pybind11.readthedocs.io/en/stable/compiling.html
@@ -191,11 +189,27 @@ endif ()
 if (BUILD_TINYFILEDIALOGS)
     message(STATUS "Building TINYFILEDIALOGS from source")
     add_subdirectory(tinyfiledialogs)
-    set(tinyfiledialogs_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/tinyfiledialogs")
+    set(tinyfiledialogs_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/tinyfiledialogs/include")
     set(tinyfiledialogs_LIBRARIES tinyfiledialogs)
 else ()
     message(SEND_ERROR "TINYFILEDIALOGS dependency not met.")
 endif ()
+
+# tinygltf
+Directories("${CMAKE_CURRENT_SOURCE_DIR}/tinygltf" tinygltf_INCLUDE_DIRS)
+
+# tinyobjloader
+message(STATUS "Building tinyobjloader from source")
+include_directories("tinyobjloader/")
+add_library(tinyobjloader STATIC tinyobjloader/tinyobjloader/tiny_obj_loader.cc)
+if (NOT BUILD_SHARED_LIBS)
+  install(TARGETS tinyobjloader
+        RUNTIME DESTINATION ${CMAKE_INSTALL_PREFIX}/bin
+        LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
+        ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
+endif()
+set(tinyobjloader_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/tinyobjloader")
+set(tinyobjloader_LIBRARIES tinyobjloader)
 
 # rply
 Directories("${CMAKE_CURRENT_SOURCE_DIR}/rply"   rply_INCLUDE_DIRS)
@@ -257,7 +271,7 @@ if (BUILD_QHULL)
             ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
     endif()
     set(qhull_INCLUDE_DIRS "${CMAKE_CURRENT_SOURCE_DIR}/qhull/src")
-    set(qhull_LIBRARIES qhullcpp qhullstatic_r) 
+    set(qhull_LIBRARIES qhullcpp qhullstatic_r)
 else ()
     message(SEND_ERROR "qhull dependency not met.")
 endif ()
@@ -272,7 +286,7 @@ if (BUILD_UNIT_TESTS)
       ${CMAKE_CURRENT_SOURCE_DIR}/googletest/googletest/
       ${CMAKE_CURRENT_SOURCE_DIR}/googletest/googlemock/include
       ${CMAKE_CURRENT_SOURCE_DIR}/googletest/googlemock/)
-    set(googletest_SOURCE 
+    set(googletest_SOURCE
         googletest/googletest/src/gtest-all.cc
         googletest/googlemock/src/gmock-all.cc)
     include_directories(${googletest_INCLUDE_DIRS})
@@ -283,27 +297,60 @@ if (BUILD_UNIT_TESTS)
             LIBRARY DESTINATION ${CMAKE_INSTALL_PREFIX}/lib
             ARCHIVE DESTINATION ${CMAKE_INSTALL_PREFIX}/lib)
     endif()
-    set(googletest_LIBRARIES googletest) 
+    set(googletest_LIBRARIES googletest)
 endif()
 
+# benchmark
+if (BUILD_BENCHMARKS)
+    # turn off installing and testing of the benchmark lib
+    set( BENCHMARK_ENABLE_INSTALL  OFF CACHE BOOL "This should be OFF. Enables installing the benchmark lib" ) 
+    set( BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "This should be OFF. Enables gtest framework for the benchmark lib" )
+    set( BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "This should be OFF. Enables tests for the benchmark lib" )
+    add_subdirectory(benchmark)
+    # set the cache vars introduced by the benchmark lib as advanced to not
+    # clutter the cmake interfaces
+    mark_as_advanced( BENCHMARK_ENABLE_INSTALL 
+                      BENCHMARK_ENABLE_GTEST_TESTS 
+                      BENCHMARK_ENABLE_TESTING 
+                      BENCHMARK_ENABLE_ASSEMBLY_TESTS
+                      BENCHMARK_DOWNLOAD_DEPENDENCIES
+                      BENCHMARK_BUILD_32_BITS
+                      BENCHMARK_ENABLE_EXCEPTIONS
+                      BENCHMARK_ENABLE_LTO
+                      BENCHMARK_USE_LIBCXX
+                      )
+endif()
 
-# set 3RDPARTY_INCLUDE_DIRS
+# fmt library
+set(fmt_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/fmt/include)
+INSTALL_HEADERS(fmt)
+
+# PoissonRecon
+set(poisson_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/PoissonRecon)
+
+
 list(APPEND 3RDPARTY_INCLUDE_DIRS
-     # ${dirent_INCLUDE_DIRS} # fails on Linux, seems to require Windows headers
+     ${dirent_INCLUDE_DIRS}
      ${EIGEN3_INCLUDE_DIRS}
-     ${flann_INCLUDE_DIRS}
+     ${FLANN_INCLUDE_DIRS}
      ${GLEW_INCLUDE_DIRS}
      ${GLFW_INCLUDE_DIRS}
-     ${JPEG_INCLUDE_DIR}
-     ${JPEG_INCLUDE_DIRS}
+     ${JPEG_TURBO_INCLUDE_DIRS}
      ${JSONCPP_INCLUDE_DIRS}
      ${liblzf_INCLUDE_DIRS}
+     ${tomasakeninemoeller_INCLUDE_DIRS}
      ${librealsense_INCLUDE_DIRS}
      ${PNG_INCLUDE_DIRS}
      ${rply_INCLUDE_DIRS}
      ${tinyfiledialogs_INCLUDE_DIRS}
+     ${tinygltf_INCLUDE_DIRS}
+     ${tinyobjloader_INCLUDE_DIRS}
      ${qhull_INCLUDE_DIRS}
-     ${googletest_INCLUDE_DIRS})
+     ${googletest_INCLUDE_DIRS}
+     ${fmt_INCLUDE_DIRS}
+     ${k4a_INCLUDE_DIRS}
+     ${poisson_INCLUDE_DIRS}
+)
 
 # set 3RDPARTY_INCLUDE_DIRS_AT_INSTALL
 # Open3D's header only dependes on Eigen and GL headers
@@ -312,26 +359,32 @@ list(APPEND 3RDPARTY_INCLUDE_DIRS_AT_INSTALL
      ${EIGEN3_INCLUDE_DIRS}
      ${GLEW_INCLUDE_DIRS}
      ${GLFW_INCLUDE_DIRS}
+     ${fmt_INCLUDE_DIRS}
 )
 
 # set 3RDPARTY_LIBRARY_DIRS
 list(APPEND 3RDPARTY_LIBRARY_DIRS
     ${GLEW_LIBRARY_DIRS}
     ${GLFW_LIBRARY_DIRS}
-    ${JPEG_LIBRARY_DIRS}
     ${JSONCPP_LIBRARY_DIRS}
-    ${PNG_LIBRARY_DIRS})
+    ${PNG_LIBRARY_DIRS}
+    ${JPEG_TURBO_LIBRARY_DIRS}
+)
 
 # set 3RDPARTY_LIBRARIES
 list(APPEND 3RDPARTY_LIBRARIES
+     ${FLANN_LIBRARIES}
      ${GLEW_LIBRARIES}
      ${GLFW_LIBRARIES}
-     ${JPEG_LIBRARIES}
+     ${JPEG_TURBO_LIBRARIES}
      ${JSONCPP_LIBRARIES}
      ${PNG_LIBRARIES}
      ${tinyfiledialogs_LIBRARIES}
+     ${tinyobjloader_LIBRARIES}
      ${qhull_LIBRARIES}
-     ${googletest_LIBRARIES})
+     ${googletest_LIBRARIES}
+     ${fmt_LIBRARIES}
+)
 
 # set PRE_BUILT_3RDPARTY_LIBRARIES. When building Open3D as shared library,
 # the user app that links Open3D also need to link PRE_BUILT_3RDPARTY_LIBRARIES,
@@ -342,12 +395,6 @@ if (NOT BUILD_GLEW)
 endif ()
 if (NOT BUILD_GLFW)
     list(APPEND PRE_BUILT_3RDPARTY_LIBRARIES ${GLFW_LIBRARIES})
-endif ()
-if (NOT BUILD_JPEG)
-    list(APPEND PRE_BUILT_3RDPARTY_LIBRARIES ${JPEG_LIBRARIES})
-endif ()
-if (NOT BUILD_JSONCPP)
-    list(APPEND PRE_BUILT_3RDPARTY_LIBRARIES ${JSONCPP_LIBRARIES})
 endif ()
 if (NOT BUILD_PNG)
     list(APPEND PRE_BUILT_3RDPARTY_LIBRARIES ${PNG_LIBRARIES})

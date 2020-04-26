@@ -29,6 +29,7 @@
 #include "Open3D/Camera/PinholeCameraTrajectory.h"
 #include "Open3D/ColorMap/ImageWarpingField.h"
 #include "Open3D/Geometry/Image.h"
+#include "Open3D/Geometry/KDTreeFlann.h"
 #include "Open3D/Geometry/RGBDImage.h"
 #include "Open3D/Geometry/TriangleMesh.h"
 
@@ -67,9 +68,9 @@ CreateVertexAndImageVisibility(
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static)
 #endif
-    for (int c = 0; c < n_camera; c++) {
+    for (int c = 0; c < int(n_camera); c++) {
         int viscnt = 0;
-        for (int vertex_id = 0; vertex_id < n_vertex; vertex_id++) {
+        for (size_t vertex_id = 0; vertex_id < n_vertex; vertex_id++) {
             Eigen::Vector3d X = mesh.vertices_[vertex_id];
             float u, v, d;
             std::tie(u, v, d) = Project3DPointAndGetUVDepth(X, camera, c);
@@ -86,17 +87,17 @@ CreateVertexAndImageVisibility(
 #endif
                 {
                     visiblity_vertex_to_image[vertex_id].push_back(c);
-                    visiblity_image_to_vertex[c].push_back(vertex_id);
+                    visiblity_image_to_vertex[c].push_back(int(vertex_id));
                     viscnt++;
                 }
             }
         }
-        utility::PrintDebug("[cam %d] %.5f percents are visible\n", c,
-                            double(viscnt) / n_vertex * 100);
+        utility::LogDebug("[cam {:d}] {:.5f} percents are visible", c,
+                          double(viscnt) / n_vertex * 100);
         fflush(stdout);
     }
-    return std::move(std::make_tuple(visiblity_vertex_to_image,
-                                     visiblity_image_to_vertex));
+    return std::make_tuple(visiblity_vertex_to_image,
+                           visiblity_image_to_vertex);
 }
 
 template <typename T>
@@ -166,10 +167,10 @@ void SetProxyIntensityForVertex(
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static)
 #endif
-    for (auto i = 0; i < n_vertex; i++) {
+    for (int i = 0; i < int(n_vertex); i++) {
         proxy_intensity[i] = 0.0;
         float sum = 0.0;
-        for (auto iter = 0; iter < visiblity_vertex_to_image[i].size();
+        for (size_t iter = 0; iter < visiblity_vertex_to_image[i].size();
              iter++) {
             int j = visiblity_vertex_to_image[i][iter];
             float gray;
@@ -201,10 +202,10 @@ void SetProxyIntensityForVertex(
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static)
 #endif
-    for (auto i = 0; i < n_vertex; i++) {
+    for (int i = 0; i < int(n_vertex); i++) {
         proxy_intensity[i] = 0.0;
         float sum = 0.0;
-        for (auto iter = 0; iter < visiblity_vertex_to_image[i].size();
+        for (size_t iter = 0; iter < visiblity_vertex_to_image[i].size();
              iter++) {
             int j = visiblity_vertex_to_image[i][iter];
             float gray;
@@ -228,17 +229,20 @@ void SetGeometryColorAverage(
         const std::vector<std::shared_ptr<geometry::Image>>& images_color,
         const camera::PinholeCameraTrajectory& camera,
         const std::vector<std::vector<int>>& visiblity_vertex_to_image,
-        int image_boundary_margin /*= 10*/) {
-    auto n_vertex = mesh.vertices_.size();
+        int image_boundary_margin /*= 10*/,
+        int invisible_vertex_color_knn /*= 3*/) {
+    size_t n_vertex = mesh.vertices_.size();
     mesh.vertex_colors_.clear();
     mesh.vertex_colors_.resize(n_vertex);
+    std::vector<size_t> valid_vertices;
+    std::vector<size_t> invalid_vertices;
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static)
 #endif
-    for (int i = 0; i < n_vertex; i++) {
+    for (int i = 0; i < (int)n_vertex; i++) {
         mesh.vertex_colors_[i] = Eigen::Vector3d::Zero();
         double sum = 0.0;
-        for (auto iter = 0; iter < visiblity_vertex_to_image[i].size();
+        for (size_t iter = 0; iter < visiblity_vertex_to_image[i].size();
              iter++) {
             int j = visiblity_vertex_to_image[i][iter];
             unsigned char r_temp, g_temp, b_temp;
@@ -260,8 +264,39 @@ void SetGeometryColorAverage(
                 sum += 1.0;
             }
         }
-        if (sum > 0.0) {
-            mesh.vertex_colors_[i] /= sum;
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+        {
+            if (sum > 0.0) {
+                mesh.vertex_colors_[i] /= sum;
+                valid_vertices.push_back(i);
+            } else {
+                invalid_vertices.push_back(i);
+            }
+        }
+    }
+    if (invisible_vertex_color_knn > 0) {
+        std::shared_ptr<geometry::TriangleMesh> valid_mesh =
+                mesh.SelectByIndex(valid_vertices);
+        geometry::KDTreeFlann kd_tree(*valid_mesh);
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static)
+#endif
+        for (int i = 0; i < (int)invalid_vertices.size(); ++i) {
+            size_t invalid_vertex = invalid_vertices[i];
+            std::vector<int> indices;  // indices to valid_mesh
+            std::vector<double> dists;
+            kd_tree.SearchKNN(mesh.vertices_[invalid_vertex],
+                              invisible_vertex_color_knn, indices, dists);
+            Eigen::Vector3d new_color(0, 0, 0);
+            for (const int& index : indices) {
+                new_color += valid_mesh->vertex_colors_[index];
+            }
+            if (indices.size() > 0) {
+                new_color /= static_cast<double>(indices.size());
+            }
+            mesh.vertex_colors_[invalid_vertex] = new_color;
         }
     }
 }
@@ -272,17 +307,20 @@ void SetGeometryColorAverage(
         const std::vector<ImageWarpingField>& warping_fields,
         const camera::PinholeCameraTrajectory& camera,
         const std::vector<std::vector<int>>& visiblity_vertex_to_image,
-        int image_boundary_margin /*= 10*/) {
-    auto n_vertex = mesh.vertices_.size();
+        int image_boundary_margin /*= 10*/,
+        int invisible_vertex_color_knn /*= 3*/) {
+    size_t n_vertex = mesh.vertices_.size();
     mesh.vertex_colors_.clear();
     mesh.vertex_colors_.resize(n_vertex);
+    std::vector<size_t> valid_vertices;
+    std::vector<size_t> invalid_vertices;
 #ifdef _OPENMP
 #pragma omp parallel for schedule(static)
 #endif
-    for (int i = 0; i < n_vertex; i++) {
+    for (int i = 0; i < (int)n_vertex; i++) {
         mesh.vertex_colors_[i] = Eigen::Vector3d::Zero();
         double sum = 0.0;
-        for (auto iter = 0; iter < visiblity_vertex_to_image[i].size();
+        for (size_t iter = 0; iter < visiblity_vertex_to_image[i].size();
              iter++) {
             int j = visiblity_vertex_to_image[i][iter];
             unsigned char r_temp, g_temp, b_temp;
@@ -304,8 +342,39 @@ void SetGeometryColorAverage(
                 sum += 1.0;
             }
         }
-        if (sum > 0.0) {
-            mesh.vertex_colors_[i] /= sum;
+#ifdef _OPENMP
+#pragma omp critical
+#endif
+        {
+            if (sum > 0.0) {
+                mesh.vertex_colors_[i] /= sum;
+                valid_vertices.push_back(i);
+            } else {
+                invalid_vertices.push_back(i);
+            }
+        }
+    }
+    if (invisible_vertex_color_knn > 0) {
+        std::shared_ptr<geometry::TriangleMesh> valid_mesh =
+                mesh.SelectByIndex(valid_vertices);
+        geometry::KDTreeFlann kd_tree(*valid_mesh);
+#ifdef _OPENMP
+#pragma omp parallel for schedule(static)
+#endif
+        for (int i = 0; i < (int)invalid_vertices.size(); ++i) {
+            size_t invalid_vertex = invalid_vertices[i];
+            std::vector<int> indices;  // indices to valid_mesh
+            std::vector<double> dists;
+            kd_tree.SearchKNN(mesh.vertices_[invalid_vertex],
+                              invisible_vertex_color_knn, indices, dists);
+            Eigen::Vector3d new_color(0, 0, 0);
+            for (const int& index : indices) {
+                new_color += valid_mesh->vertex_colors_[index];
+            }
+            if (indices.size() > 0) {
+                new_color /= static_cast<double>(indices.size());
+            }
+            mesh.vertex_colors_[invalid_vertex] = new_color;
         }
     }
 }

@@ -41,9 +41,6 @@ useful again after a decision has been made about the way to make these
 subcomponents visible to UnitTest.
 */
 
-// ----------------------------------------------------------------------------
-//
-// ----------------------------------------------------------------------------
 vector<geometry::Image> GenerateImages(const int& width,
                                        const int& height,
                                        const int& num_of_channels,
@@ -67,9 +64,6 @@ vector<geometry::Image> GenerateImages(const int& width,
     return images;
 }
 
-// ----------------------------------------------------------------------------
-//
-// ----------------------------------------------------------------------------
 vector<shared_ptr<geometry::Image>> GenerateSharedImages(
         const int& width,
         const int& height,
@@ -86,9 +80,6 @@ vector<shared_ptr<geometry::Image>> GenerateSharedImages(
     return output;
 }
 
-// ----------------------------------------------------------------------------
-//
-// ----------------------------------------------------------------------------
 vector<geometry::RGBDImage> GenerateRGBDImages(const int& width,
                                                const int& height,
                                                const size_t& size) {
@@ -110,12 +101,9 @@ vector<geometry::RGBDImage> GenerateRGBDImages(const int& width,
         rgbdImages.push_back(rgbdImage);
     }
 
-    return move(rgbdImages);
+    return rgbdImages;
 }
 
-// ----------------------------------------------------------------------------
-//
-// ----------------------------------------------------------------------------
 camera::PinholeCameraTrajectory GenerateCamera(const int& width,
                                                const int& height,
                                                const Eigen::Vector3d& pose) {
@@ -141,9 +129,6 @@ camera::PinholeCameraTrajectory GenerateCamera(const int& width,
     return camera;
 }
 
-// ----------------------------------------------------------------------------
-//
-// ----------------------------------------------------------------------------
 TEST(ColorMapOptimization, DISABLED_Project3DPointAndGetUVDepth) {
     vector<Eigen::Vector3d> ref_points = {
             {1.072613, 0.611307, 42.921570}, {0.897783, 0.859754, 43.784313},
@@ -165,26 +150,22 @@ TEST(ColorMapOptimization, DISABLED_Project3DPointAndGetUVDepth) {
     int width = 320;
     int height = 240;
 
-    Eigen::Vector3d point = {3.3, 4.4, 5.5};
+    // Eigen::Vector3d point = {3.3, 4.4, 5.5};
 
     vector<Eigen::Vector3d> output;
-    for (int i = 0; i < ref_points.size(); i++) {
+    for (size_t i = 0; i < ref_points.size(); i++) {
         // change the pose randomly
         Eigen::Vector3d pose;
         Rand(pose, 0.0, 10.0, i);
         camera::PinholeCameraTrajectory camera =
                 GenerateCamera(width, height, pose);
-        int camid = 0;
 
-        float u, v, d;
+        // float u, v, d;
         // tie(u, v, d) = Project3DPointAndGetUVDepth(point, camera, camid);
-        ExpectEQ(ref_points[i], Eigen::Vector3d(u, v, d));
+        // ExpectEQ(ref_points[i], Eigen::Vector3d(u, v, d));
     }
 }
 
-// ----------------------------------------------------------------------------
-//
-// ----------------------------------------------------------------------------
 TEST(ColorMapOptimization, DISABLED_MakeVertexAndImageVisibility) {
     vector<vector<int>> ref_second = {
             {1,   421, 422, 423, 424, 425, 426, 427, 428, 429, 430, 431, 432,
@@ -239,7 +220,7 @@ TEST(ColorMapOptimization, DISABLED_MakeVertexAndImageVisibility) {
     // first is a large vector of (mostly) empty vectors.
     // TODO: perhaps a different kind of initialization is necessary in order
     // to fill the first vector with data that can be used for validation
-    EXPECT_EQ(762, first.size());
+    EXPECT_EQ(762, int(first.size()));
 
     EXPECT_EQ(ref_second.size(), second.size());
     EXPECT_EQ(ref_second[0].size(), second[0].size());
@@ -247,20 +228,20 @@ TEST(ColorMapOptimization, DISABLED_MakeVertexAndImageVisibility) {
         EXPECT_EQ(ref_second[0][i], second[0][i]);
 }
 
-// ----------------------------------------------------------------------------
-//
-// ----------------------------------------------------------------------------
 TEST(ColorMapOptimization, DISABLED_MakeWarpingFields) {
-    int ref_anchor_w = 4;
-    int ref_anchor_h = 4;
-    double ref_anchor_step = 1.666667;
-    vector<double> ref_flow = {0.000000, 0.000000, 1.666667, 0.000000, 3.333333,
-                               0.000000, 5.000000, 0.000000, 0.000000, 1.666667,
-                               1.666667, 1.666667, 3.333333, 1.666667, 5.000000,
-                               1.666667, 0.000000, 3.333333, 1.666667, 3.333333,
-                               3.333333, 3.333333, 5.000000, 3.333333, 0.000000,
-                               5.000000, 1.666667, 5.000000, 3.333333, 5.000000,
-                               5.000000, 5.000000};
+    // int ref_anchor_w = 4;
+    // int ref_anchor_h = 4;
+    // double ref_anchor_step = 1.666667;
+    // vector<double> ref_flow = {0.000000, 0.000000, 1.666667,
+    // 0.000000, 3.333333,
+    //                            0.000000, 5.000000, 0.000000,
+    //                            0.000000, 1.666667, 1.666667,
+    //                            1.666667, 3.333333, 1.666667, 5.000000,
+    //                            1.666667, 0.000000, 3.333333,
+    //                            1.666667, 3.333333, 3.333333,
+    //                            3.333333, 5.000000, 3.333333, 0.000000,
+    //                            5.000000, 1.666667, 5.000000,
+    //                            3.333333, 5.000000, 5.000000, 5.000000};
 
     size_t size = 10;
     int width = 5;
@@ -288,9 +269,6 @@ TEST(ColorMapOptimization, DISABLED_MakeWarpingFields) {
     // }
 }
 
-// ----------------------------------------------------------------------------
-//
-// ----------------------------------------------------------------------------
 TEST(ColorMapOptimization, DISABLED_QueryImageIntensity) {
     vector<bool> ref_bool = {0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 0,
                              0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0};
@@ -334,8 +312,8 @@ TEST(ColorMapOptimization, DISABLED_QueryImageIntensity) {
     Eigen::Vector3d pose(62.5, 37.5, 1.85);
     camera::PinholeCameraTrajectory camera =
             GenerateCamera(width, height, pose);
-    int camid = 0;
-    int ch = -1;
+    // int camid = 0;
+    // int ch = -1;
 
     size_t size = 25;
 
@@ -344,8 +322,8 @@ TEST(ColorMapOptimization, DISABLED_QueryImageIntensity) {
         Rand(vData, 10.0, 100.0, i);
         Eigen::Vector3d V(vData[0], vData[1], vData[2]);
 
-        bool boolResult = false;
-        float floatResult = 0.0;
+        // bool boolResult = false;
+        // float floatResult = 0.0;
 
         // tie(boolResult, floatResult) = QueryImageIntensity<float>(img,
         //                                                           V,
@@ -373,9 +351,6 @@ TEST(ColorMapOptimization, DISABLED_QueryImageIntensity) {
     }
 }
 
-// ----------------------------------------------------------------------------
-//
-// ----------------------------------------------------------------------------
 TEST(ColorMapOptimization, DISABLED_QueryImageIntensity_WarpingField) {
     vector<bool> ref_bool = {0, 1, 1, 0, 1, 0, 1, 1, 1, 1, 0, 0, 0,
                              0, 1, 1, 1, 1, 0, 1, 0, 0, 0, 1, 0};
@@ -418,14 +393,14 @@ TEST(ColorMapOptimization, DISABLED_QueryImageIntensity_WarpingField) {
 
     // TODO: change the initialization in such a way that the field has an
     // effect on the outcome of QueryImageIntensity.
-    int nr_anchors = 16;
+    // int nr_anchors = 16;
     // open3d::ImageWarpingField field(width, height, nr_anchors);
 
     Eigen::Vector3d pose(62.5, 37.5, 1.85);
     camera::PinholeCameraTrajectory camera =
             GenerateCamera(width, height, pose);
-    int camid = 0;
-    int ch = -1;
+    // int camid = 0;
+    // int ch = -1;
 
     size_t size = 25;
 
@@ -434,8 +409,8 @@ TEST(ColorMapOptimization, DISABLED_QueryImageIntensity_WarpingField) {
         Rand(vData, 10.0, 100.0, i);
         Eigen::Vector3d V(vData[0], vData[1], vData[2]);
 
-        bool boolResult = false;
-        float floatResult = 0.0;
+        // bool boolResult = false;
+        // float floatResult = 0.0;
 
         // tie(boolResult, floatResult) = QueryImageIntensity<float>(img,
         //                                                           V,
@@ -463,9 +438,6 @@ TEST(ColorMapOptimization, DISABLED_QueryImageIntensity_WarpingField) {
     }
 }
 
-// ----------------------------------------------------------------------------
-//
-// ----------------------------------------------------------------------------
 TEST(ColorMapOptimization, DISABLED_SetProxyIntensityForVertex) {
     vector<double> ref_proxy_intensity = {
             0.000000,  0.000000,  0.000000,  0.000000,  0.000000,  0.000000,
@@ -516,7 +488,7 @@ TEST(ColorMapOptimization, DISABLED_SetProxyIntensityForVertex) {
     Eigen::Vector3d pose(30, 15, 0.3);
     camera::PinholeCameraTrajectory camera =
             GenerateCamera(width, height, pose);
-    int camid = 0;
+    // int camid = 0;
 
     int n_vertex = mesh->vertices_.size();
     vector<vector<int>> vertex_to_image(n_vertex, vector<int>(size, 0));
@@ -534,9 +506,6 @@ TEST(ColorMapOptimization, DISABLED_SetProxyIntensityForVertex) {
         EXPECT_NEAR(ref_proxy_intensity[i], proxy_intensity[i], THRESHOLD_1E_6);
 }
 
-// ----------------------------------------------------------------------------
-//
-// ----------------------------------------------------------------------------
 TEST(ColorMapOptimization, DISABLED_SetProxyIntensityForVertex_WarpingField) {
     vector<double> ref_proxy_intensity = {
             0.000000,  0.000000,  0.000000,  0.000000,  0.000000,  0.000000,
@@ -597,7 +566,7 @@ TEST(ColorMapOptimization, DISABLED_SetProxyIntensityForVertex_WarpingField) {
     Eigen::Vector3d pose(30, 15, 0.3);
     camera::PinholeCameraTrajectory camera =
             GenerateCamera(width, height, pose);
-    int camid = 0;
+    // int camid = 0;
 
     int n_vertex = mesh->vertices_.size();
     vector<vector<int>> vertex_to_image(n_vertex, vector<int>(size, 0));
@@ -615,9 +584,6 @@ TEST(ColorMapOptimization, DISABLED_SetProxyIntensityForVertex_WarpingField) {
     for (size_t i = 0; i < proxy_intensity.size(); i++)
         EXPECT_NEAR(ref_proxy_intensity[i], proxy_intensity[i], THRESHOLD_1E_6);
 }
-// ----------------------------------------------------------------------------
-//
-// ----------------------------------------------------------------------------
 TEST(ColorMapOptimization, DISABLED_OptimizeImageCoorNonrigid) {
     vector<double> ref_proxy_intensity = {
             0.000000,  0.000000,  0.000000,  10.319723, 10.134256, 0.000000,
@@ -695,9 +661,6 @@ TEST(ColorMapOptimization, DISABLED_OptimizeImageCoorNonrigid) {
         EXPECT_NEAR(ref_proxy_intensity[i], proxy_intensity[i], THRESHOLD_1E_6);
 }
 
-// ----------------------------------------------------------------------------
-//
-// ----------------------------------------------------------------------------
 TEST(ColorMapOptimization, DISABLED_OptimizeImageCoorRigid) {
     vector<double> ref_proxy_intensity = {
             0.000000, 0.000000,  0.000000,  10.120416, 10.192388, 0.000000,
@@ -760,9 +723,6 @@ TEST(ColorMapOptimization, DISABLED_OptimizeImageCoorRigid) {
         EXPECT_NEAR(ref_proxy_intensity[i], proxy_intensity[i], THRESHOLD_1E_6);
 }
 
-// ----------------------------------------------------------------------------
-//
-// ----------------------------------------------------------------------------
 TEST(ColorMapOptimization, DISABLED_SetGeometryColorAverage) {
     vector<Eigen::Vector3d> ref_vertex_colors = {
             {0.000000, 0.000000, 0.000000}, {0.000000, 0.000000, 0.000000},
@@ -800,7 +760,7 @@ TEST(ColorMapOptimization, DISABLED_SetGeometryColorAverage) {
     Eigen::Vector3d pose(30, 15, 0.3);
     camera::PinholeCameraTrajectory camera =
             GenerateCamera(width, height, pose);
-    int camid = 0;
+    // int camid = 0;
 
     int n_vertex = mesh->vertices_.size();
     vector<vector<int>> vertex_to_image(n_vertex, vector<int>(size, 0));
@@ -817,9 +777,6 @@ TEST(ColorMapOptimization, DISABLED_SetGeometryColorAverage) {
         ExpectEQ(ref_vertex_colors[i], mesh->vertex_colors_[i]);
 }
 
-// ----------------------------------------------------------------------------
-//
-// ----------------------------------------------------------------------------
 TEST(ColorMapOptimization, DISABLED_SetGeometryColorAverage_WarpingFields) {
     vector<Eigen::Vector3d> ref_vertex_colors = {
             {0.000000, 0.000000, 0.000000}, {0.000000, 0.000000, 0.000000},
@@ -853,7 +810,7 @@ TEST(ColorMapOptimization, DISABLED_SetGeometryColorAverage_WarpingFields) {
 
     // TODO: change the initialization in such a way that the fields have an
     // effect on the outcome of QueryImageIntensity.
-    int nr_anchors = 6;
+    // int nr_anchors = 6;
     // vector<ImageWarpingField> fields;
     // for (size_t i = 0; i < size; i++)
     // {
@@ -867,7 +824,7 @@ TEST(ColorMapOptimization, DISABLED_SetGeometryColorAverage_WarpingFields) {
     Eigen::Vector3d pose(30, 15, 0.3);
     camera::PinholeCameraTrajectory camera =
             GenerateCamera(width, height, pose);
-    int camid = 0;
+    // int camid = 0;
 
     int n_vertex = mesh->vertices_.size();
     vector<vector<int>> vertex_to_image(n_vertex, vector<int>(size, 0));
@@ -885,9 +842,6 @@ TEST(ColorMapOptimization, DISABLED_SetGeometryColorAverage_WarpingFields) {
         ExpectEQ(ref_vertex_colors[i], mesh->vertex_colors_[i]);
 }
 
-// ----------------------------------------------------------------------------
-//
-// ----------------------------------------------------------------------------
 TEST(ColorMapOptimization, DISABLED_MakeGradientImages) {
     vector<vector<double>> ref_images0_data = {
             {76,  133, 33,  63,  159, 183, 31,  63,  11,  93,  9,   63,  164,
@@ -959,29 +913,26 @@ TEST(ColorMapOptimization, DISABLED_MakeGradientImages) {
 
     EXPECT_EQ(size, images0.size());
     for (size_t i = 0; i < size; i++) {
-        EXPECT_EQ(100, images0[i]->data_.size());
+        EXPECT_EQ(100u, images0[i]->data_.size());
         for (size_t j = 0; j < images0[i]->data_.size(); j++)
             EXPECT_EQ(ref_images0_data[i][j], images0[i]->data_[j]);
     }
 
     EXPECT_EQ(size, images1.size());
     for (size_t i = 0; i < size; i++) {
-        EXPECT_EQ(100, images1[i]->data_.size());
+        EXPECT_EQ(100u, images1[i]->data_.size());
         for (size_t j = 0; j < images1[i]->data_.size(); j++)
             EXPECT_EQ(ref_images1_data[i][j], images1[i]->data_[j]);
     }
 
     EXPECT_EQ(size, images2.size());
     for (size_t i = 0; i < size; i++) {
-        EXPECT_EQ(100, images2[i]->data_.size());
+        EXPECT_EQ(100u, images2[i]->data_.size());
         for (size_t j = 0; j < images2[i]->data_.size(); j++)
             EXPECT_EQ(ref_images2_data[i][j], images2[i]->data_[j]);
     }
 }
 
-// ----------------------------------------------------------------------------
-//
-// ----------------------------------------------------------------------------
 TEST(ColorMapOptimization, DISABLED_MakeDepthMasks) {
     vector<vector<double>> ref_images_data = {
             {0,   0,   255, 255, 255, 255, 255, 255, 255, 0,   0,   0,   255,
@@ -1022,9 +973,6 @@ TEST(ColorMapOptimization, DISABLED_MakeDepthMasks) {
     // }
 }
 
-// ----------------------------------------------------------------------------
-//
-// ----------------------------------------------------------------------------
 TEST(ColorMapOptimization, DISABLED_ColorMapOptimization) {
     vector<Eigen::Vector3d> ref_vertices = {{0.000000, 0.000000, 10.000000},
                                             {0.000000, 0.000000, -10.000000},
@@ -1121,8 +1069,8 @@ TEST(ColorMapOptimization, DISABLED_ColorMapOptimization) {
     size_t size = 10;
     int width = 320;
     int height = 240;
-    int num_of_channels = 1;
-    int bytes_per_channel = 4;
+    // int num_of_channels = 1;
+    // int bytes_per_channel = 4;
 
     shared_ptr<geometry::TriangleMesh> mesh =
             geometry::TriangleMesh::CreateSphere(10.0, 5);

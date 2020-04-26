@@ -35,9 +35,6 @@ using namespace open3d;
 using namespace std;
 using namespace unit_test;
 
-// ----------------------------------------------------------------------------
-//
-// ----------------------------------------------------------------------------
 TEST(RGBDOdometryJacobianFromColorTerm, ComputeJacobianAndResidual) {
     vector<Vector6d, utility::Vector6d_allocator> ref_J_r(10);
     ref_J_r[0] << -1.208103, 0.621106, -0.040830, 0.173142, 0.260220, -1.164557;
@@ -57,8 +54,8 @@ TEST(RGBDOdometryJacobianFromColorTerm, ComputeJacobianAndResidual) {
 
     int width = 10;
     int height = 10;
-    int num_of_channels = 1;
-    int bytes_per_channel = 4;
+    // int num_of_channels = 1;
+    // int bytes_per_channel = 4;
 
     auto srcColor = GenerateImage(width, height, 1, 4, 0.0f, 1.0f, 1);
     auto srcDepth = GenerateImage(width, height, 1, 4, 0.0f, 1.0f, 0);

@@ -41,16 +41,31 @@ message(STATUS "Using Python version major: ${PYTHON_VERSION_MAJOR}")
 
 set(PACKAGE_NAME open3d)
 
-file(GLOB_RECURSE PY_ALL_HEADER_FILES "*.h")
-file(GLOB_RECURSE PY_ALL_SOURCE_FILES "*.cpp")
+file(GLOB_RECURSE PY_ALL_SOURCE_FILES "open3d_pybind/*.cpp")
 
-ADD_SOURCE_GROUP(Core)
-ADD_SOURCE_GROUP(IO)
-ADD_SOURCE_GROUP(Tutorial)
-ADD_SOURCE_GROUP(Visualization)
+if (NOT BUILD_AZURE_KINECT)
+    list(REMOVE_ITEM PY_ALL_SOURCE_FILES
+        "${CMAKE_CURRENT_SOURCE_DIR}/open3d_pybind/io/sensor.cpp")
+endif()
+
 pybind11_add_module(${PACKAGE_NAME}
-    ${PY_ALL_HEADER_FILES} ${PY_ALL_SOURCE_FILES}
+    ${PY_ALL_SOURCE_FILES}
 )
+
+target_include_directories(${PACKAGE_NAME} PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+)
+
+# Suppress Pybind11 warnings
+target_include_directories(${PACKAGE_NAME} SYSTEM PRIVATE
+    ${PYBIND11_INCLUDE_DIR}
+)
+
+# The Python headers won't be included outside the project, so it is okay to
+# use the target_compile_definitions approach. Otherwise, use configure_file.
+if (BUILD_AZURE_KINECT)
+    target_compile_definitions(${PACKAGE_NAME} PRIVATE BUILD_AZURE_KINECT)
+endif()
 
 target_link_libraries(${PACKAGE_NAME} PRIVATE ${CMAKE_PROJECT_NAME})
 if (${PYTHON_VERSION_MAJOR} EQUAL 2)
@@ -73,9 +88,10 @@ set_target_properties(${PACKAGE_NAME} PROPERTIES
 # Note: `make python-package` clears PYTHON_COMPILED_MODULE_DIR first every time
 set(PYTHON_PACKAGE_DST_DIR "${CMAKE_BINARY_DIR}/lib/python_package")
 message(STATUS "PYPI_PACKAGE_NAME: ${PYPI_PACKAGE_NAME}")
+
 add_custom_target(python-package
     COMMAND ${CMAKE_COMMAND}
-            -DPYTHON_PACKAGE_SRC_DIR=${CMAKE_CURRENT_SOURCE_DIR}/package
+            -DPYTHON_PACKAGE_SRC_DIR=${CMAKE_CURRENT_SOURCE_DIR}
             -DPYTHON_PACKAGE_DST_DIR=${PYTHON_PACKAGE_DST_DIR}
             -DPYTHON_VERSION=${PYTHON_VERSION}
             -DPYTHON_COMPILED_MODULE_PATH=$<TARGET_FILE:${PACKAGE_NAME}>
