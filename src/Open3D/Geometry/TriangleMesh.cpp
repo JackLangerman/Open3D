@@ -1447,7 +1447,7 @@ void TriangleMesh::RemoveTrianglesByIndex(
         const std::vector<size_t> &triangle_indices) {
     std::vector<bool> triangle_mask(triangles_.size(), false);
     for (auto tidx : triangle_indices) {
-        if (tidx >= 0 && tidx < triangles_.size()) {
+        if (tidx < triangles_.size()) {
             triangle_mask[tidx] = true;
         } else {
             utility::LogWarning(
@@ -1487,7 +1487,7 @@ void TriangleMesh::RemoveVerticesByIndex(
         const std::vector<size_t> &vertex_indices) {
     std::vector<bool> vertex_mask(vertices_.size(), false);
     for (auto vidx : vertex_indices) {
-        if (vidx >= 0 && vidx < vertices_.size()) {
+        if (vidx < vertices_.size()) {
             vertex_mask[vidx] = true;
         } else {
             utility::LogWarning(
