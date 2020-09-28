@@ -110,8 +110,8 @@ TetraMesh &TetraMesh::RemoveDuplicatedTetras() {
     size_t k = 0;
     for (size_t i = 0; i < old_tetra_num; i++) {
         Index4 index;
-        std::array<Index, 4> t{tetras_[i](0), tetras_[i](1), tetras_[i](2),
-                               tetras_[i](3)};
+        std::array<Index, 4> t{{tetras_[i](0), tetras_[i](1), tetras_[i](2),
+                                       tetras_[i](3)}};
 
         // We sort the indices to find duplicates, because tetra (0-1-2-3)
         // and tetra (2-0-3-1) are the same.
@@ -304,16 +304,16 @@ std::shared_ptr<TriangleMesh> TetraMesh::ExtractTriangleMesh(
 
             triangle_mesh->triangles_.push_back(tri);
         } else if (4 == num_verts) {
-            std::array<int, 4> order = {-1, 0, 0, 0};
+            std::array<int, 4> order = {{-1, 0, 0, 0}};
             if (HasCommonVertexIndex(keys[0], keys[1]) &&
                 HasCommonVertexIndex(keys[0], keys[2])) {
-                order = {1, 0, 2, 3};
+                order = {{1, 0, 2, 3}};
             } else if (HasCommonVertexIndex(keys[0], keys[1]) &&
                        HasCommonVertexIndex(keys[0], keys[3])) {
-                order = {1, 0, 3, 2};
+                order = {{1, 0, 3, 2}};
             } else if (HasCommonVertexIndex(keys[0], keys[2]) &&
                        HasCommonVertexIndex(keys[0], keys[3])) {
-                order = {2, 0, 3, 1};
+                order = {{2, 0, 3, 1}};
             }
 
             if (order[0] != -1) {

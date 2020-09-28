@@ -52,10 +52,8 @@ TriangleMesh &TriangleMesh::Clear() {
     triangle_normals_.clear();
     adjacency_list_.clear();
     triangle_uvs_.clear();
-    materials_.clear();
     triangle_material_ids_.clear();
     textures_.clear();
-
     return *this;
 }
 
@@ -65,10 +63,9 @@ TriangleMesh &TriangleMesh::Transform(const Eigen::Matrix4d &transformation) {
     return *this;
 }
 
-TriangleMesh &TriangleMesh::Rotate(const Eigen::Matrix3d &R,
-                                   const Eigen::Vector3d &center) {
+TriangleMesh &TriangleMesh::Rotate(const Eigen::Matrix3d &R, bool center) {
     MeshBase::Rotate(R, center);
-    RotateNormals(R, triangle_normals_);
+    RotateNormals(R, triangle_normals_, center);
     return *this;
 }
 
@@ -1450,7 +1447,7 @@ void TriangleMesh::RemoveTrianglesByIndex(
         const std::vector<size_t> &triangle_indices) {
     std::vector<bool> triangle_mask(triangles_.size(), false);
     for (auto tidx : triangle_indices) {
-        if (tidx >= 0 && tidx < triangles_.size()) {
+        if (tidx < triangles_.size()) { // removed tidx >= 0 && 
             triangle_mask[tidx] = true;
         } else {
             utility::LogWarning(
@@ -1490,7 +1487,7 @@ void TriangleMesh::RemoveVerticesByIndex(
         const std::vector<size_t> &vertex_indices) {
     std::vector<bool> vertex_mask(vertices_.size(), false);
     for (auto vidx : vertex_indices) {
-        if (vidx >= 0 && vidx < vertices_.size()) {
+        if (vidx < vertices_.size()) { // removed vidx >= 0 && 
             vertex_mask[vidx] = true;
         } else {
             utility::LogWarning(
